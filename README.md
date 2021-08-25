@@ -86,6 +86,13 @@ It returns a plain map
     }
 ```
 
+## Configure
+
+```
+config :file_store,
+  storage_dir_prefix: "/path/to/uploads"
+```
+
 ## How to use with live file uploads
 
 Here is an example...
