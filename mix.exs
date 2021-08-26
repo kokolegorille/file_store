@@ -22,6 +22,7 @@ defmodule FileStore.MixProject do
   defp deps do
     [
       {:file_info, "~> 0.0.4"},
+      {:mime, "~> 2.0"},
     ]
   end
 end

@@ -4,24 +4,50 @@ defmodule FileStore do
   """
 
   def store(id, type, path, filename) do
-    dest = Path.join([uploads_directory(), type, id, filename])
-    File.mkdir_p!(Path.dirname(dest))
+    file_info = get_file_info(path)
+    if ensure_file_mime_type(filename, file_info["content_type"]) do
+      {:ok, Map.merge(do_store(id, type, path, filename), file_info)}
+    else
+      {:error, :invalid_content_type}
+    end
+  end
 
-    File.cp!(path, dest)
-
-    %{
-      "id" => id,
-      "filename" => filename,
-      "type" => type,
-      "path" => dest,
-      "hash" => hash_file(dest)
-    }
-    |> Map.merge(file_info(dest))
+  def store!(id, type, path, filename) do
+    file_info = get_file_info(path)
+    if ensure_file_mime_type(filename, file_info["content_type"]) do
+      Map.merge(do_store(id, type, path, filename), file_info)
+    else
+      raise "Uploaded file has wrong MIME type"
+    end
   end
 
   # Private
 
-  defp file_info(filename) do
+  defp do_store(id, type, path, filename) do
+    dest = Path.join([uploads_directory(), type, id, filename])
+      dirname = Path.dirname(dest)
+      unless File.exists?(dirname), do: File.mkdir_p!(dirname)
+
+      File.cp!(path, dest)
+
+      %{
+        "id" => id,
+        "filename" => filename,
+        "type" => type,
+        "path" => dest,
+        "hash" => do_hash_file(dest)
+      }
+  end
+
+  defp ensure_file_mime_type(filename, content_type) do
+    # Ensure the file extension returns the MIME type detected by file_info
+    content_type == filename
+    |> Path.extname()
+    |> String.trim_leading(".")
+    |> MIME.type()
+  end
+
+  defp get_file_info(filename) do
     size = File.lstat!(filename).size
 
     file_mime = filename
@@ -36,7 +62,7 @@ defmodule FileStore do
     }
   end
 
-  defp hash_file(file_path) do
+  defp do_hash_file(file_path) do
     hash_ref = :crypto.hash_init(:sha256)
 
     file_path
