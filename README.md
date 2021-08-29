@@ -1,6 +1,8 @@
 # FileStore
 
-**TODO: Add description**
+Simple local storage.
+
+It is not intended to be used in the cloud, but it plays well with live_file_upload.
 
 ## Installation
 
@@ -19,13 +21,7 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at [https://hexdocs.pm/file_store](https://hexdocs.pm/file_store).
 
-# Local file_store
-
-It is not intended to be used in the cloud.
-
-But it plays well with live_file_upload.
-
-## dependency
+## Dependencies
 
 {:file_info, "~> 0.0.4"},
 
@@ -33,41 +29,14 @@ But it plays well with live_file_upload.
 
 Only one function
 
-id: uuid of resource
-type: the field_name
 path: the temp file path
+dest: the destination directory
 filename: the original filename
-
-If the id of the resource is not known before create, use a simple uuid field.
-
-```
-  @doc false
-  def changeset(event, attrs) do
-    event
-    |> cast(attrs, @required_fields ++ @optional_fields)
-    |> ensure_uuid(:uploads_uuid)
-    |> validate_required(@required_fields)
-  end
-
-  defp ensure_uuid(changeset, field) do
-    case get_field(changeset, field) do
-      nil -> put_change(changeset, field, Ecto.UUID.generate())
-      _ -> changeset
-    end
-  end
-```
-
-Be sure to get the uuid
-```
-  defp get_id_from_socket(socket) do
-    socket.assigns.event.uploads_uuid || socket.assigns.changeset.changes.uploads_uuid
-  end
-```
 
 ## Function
 
 ```
-def store(id, type, path, filename) do
+def store(path, dest, filename) do
   ...
 end
 ```
@@ -76,38 +45,38 @@ It returns a plain map
 
 ```
     %{
-      "id" => uuid,
       "filename" => string,
-      "type" => string,
-      "path" => string,
-      "hash" => string,
-      "size" => int,
       "content_type" => string,
+      "path" => string,
+      "size" => int,
     }
-```
-
-## Configure
-
-```
-config :file_store,
-  storage_dir_prefix: "/path/to/uploads"
 ```
 
 ## How to use with live file uploads
 
-Here is an example...
+Here is an example... in a live view form component
 
 ```
   defp do_consume_entries(socket, key) when key in ~w(medium thumbnail)a do
     consume_uploaded_entries(socket, key, fn %{path: path} = _meta, entry ->
       id = get_id_from_socket(socket)
-
       # Transform key to string for file_store
-      file = FileStore.store(id, to_string(key), path, entry.client_name)
-      #DomainEvents.store_file(file, socket.assigns.metadata)
+      key = to_string(key)
+      # Use your own way to generate destination dir from id and key!
+      dest = generate_dest(id, key)
 
+      file = FileStore.store(path, dest, entry.client_name)
       file["path"]
     end)
   end
+
+  defp generate_dest(id, key) do
+    Path.join([uploads_directory(), key, id])
+  end
+
+  defp uploads_directory do
+    Application.get_env(:your_app4, :storage_dir_prefix)
+  end
 ```
 
+You need to set storage_prefix_dir in your config.
