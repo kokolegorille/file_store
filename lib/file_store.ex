@@ -3,6 +3,8 @@ defmodule FileStore do
   Documentation for `FileStore`.
 
   A super simple local file storage.
+
+  It checks mime type and returns a file_info plain map
   """
 
   @doc"""
@@ -40,7 +42,8 @@ defmodule FileStore do
 
     unless File.exists?(dest), do: File.mkdir_p!(dest)
 
-    File.cp!(path, full_path)
+    # cp is not efficient and leads to timeout!
+    File.rename(path, full_path)
 
     %{
       "filename" => filename,
